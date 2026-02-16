@@ -1,0 +1,890 @@
+# Attendance Management System (REST) — Oracle + Lombok
+
+This repository contains a complete Spring Boot REST project scaffolded for Oracle DB, using Lombok, JWT security, and JPA. No Thymeleaf, no seed data. Copy files into a Maven project created with Spring Initializr (Spring Web, Spring Data JPA, Spring Security, Lombok, Validation).
+
+---
+
+## Project structure
+
+```
+attendance-rest-oracle-lombok/
+├─ pom.xml
+└─ src/main/java/com/example/attendance/
+   ├─ AttendanceApplication.java
+   ├─ config/
+   │  ├─ SecurityConfig.java
+   │  ├─ JwtFilter.java
+   │  └─ JwtUtil.java
+   ├─ controller/
+   │  ├─ AuthController.java
+   │  ├─ AdminController.java
+   │  └─ UserController.java
+   ├─ dto/
+   │  ├─ LoginRequest.java
+   │  ├─ RegisterUserRequest.java
+   │  └─ AttendanceRequest.java
+   ├─ entity/
+   │  ├─ Role.java
+   │  ├─ AppUser.java
+   │  ├─ Attendance.java
+   │  └─ Status.java
+   ├─ repository/
+   │  ├─ RoleRepository.java
+   │  ├─ UserRepository.java
+   │  └─ AttendanceRepository.java
+   ├─ service/
+   │  ├─ UserService.java
+   │  └─ AttendanceService.java
+   └─ exception/
+      └─ ApiException.java
+
+src/main/resources/
+├─ application.yml
+```
+
+---
+
+## pom.xml
+
+```xml
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.example</groupId>
+    <artifactId>attendance</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <properties>
+        <java.version>17</java.version>
+        <spring.boot.version>3.1.4</spring.boot.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring.boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- Spring Boot starters -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.30</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Oracle JDBC (Maven Central) -->
+        <dependency>
+            <groupId>com.oracle.database.jdbc</groupId>
+            <artifactId>ojdbc11</artifactId>
+            <version>23.3.0.23.09</version>
+        </dependency>
+
+        <!-- JWT (io.jsonwebtoken) -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.11.5</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.11.5</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.11.5</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Test -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+```
+
+---
+
+## src/main/resources/application.yml
+
+```yaml
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:oracle:thin:@localhost:1521/XEPDB1
+    username: attendance_user
+    password: attendance_pass
+    driver-class-name: oracle.jdbc.OracleDriver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.OracleDialect
+
+app:
+  jwt:
+    secret: ReplaceThisWithAStrongSecret
+    expiration-ms: 86400000
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+```
+
+---
+
+## Java Source Files (package: com.example.attendance)
+
+> Note: Create the package folder structure and paste each file into the matching path.
+
+### AttendanceApplication.java
+
+```java
+package com.example.attendance;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class AttendanceApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(AttendanceApplication.class, args);
+    }
+}
+```
+
+---
+
+### entity/Role.java
+
+```java
+package com.example.attendance.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+@Entity
+@Table(name = "roles")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Role {
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long id;
+
+    @Column(unique = true, nullable = false)
+    private String name; // ROLE_ADMIN, ROLE_STUDENT, ROLE_FACULTY
+}
+```
+
+---
+
+### entity/AppUser.java
+
+```java
+package com.example.attendance.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.util.HashSet;
+import java.util.Set;
+
+@Entity
+@Table(name = "users")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class AppUser {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long id;
+
+    @Column(unique = true, nullable = false)
+    private String username;
+
+    @Column(nullable = false)
+    private String password;
+
+    private String fullName;
+    private String email;
+    private boolean enabled = true;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(name = "user_roles",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id"))
+    @Builder.Default
+    private Set<Role> roles = new HashSet<>();
+}
+```
+
+---
+
+### entity/Status.java
+
+```java
+package com.example.attendance.entity;
+
+public enum Status {
+    PRESENT, ABSENT, LEAVE, LATE
+}
+```
+
+---
+
+### entity/Attendance.java
+
+```java
+package com.example.attendance.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "attendance", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id","date"}))
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Attendance {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private AppUser user;
+
+    private LocalDate date;
+
+    @Enumerated(EnumType.STRING)
+    private Status status;
+
+    private String remarks;
+}
+```
+
+---
+
+### repository/RoleRepository.java
+
+```java
+package com.example.attendance.repository;
+
+import com.example.attendance.entity.Role;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.Optional;
+
+public interface RoleRepository extends JpaRepository<Role, Long> {
+    Optional<Role> findByName(String name);
+}
+```
+
+---
+
+### repository/UserRepository.java
+
+```java
+package com.example.attendance.repository;
+
+import com.example.attendance.entity.AppUser;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.Optional;
+
+public interface UserRepository extends JpaRepository<AppUser, Long> {
+    Optional<AppUser> findByUsername(String username);
+}
+```
+
+---
+
+### repository/AttendanceRepository.java
+
+```java
+package com.example.attendance.repository;
+
+import com.example.attendance.entity.Attendance;
+import com.example.attendance.entity.AppUser;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
+    List<Attendance> findByUserOrderByDateDesc(AppUser user);
+    Optional<Attendance> findByUserAndDate(AppUser user, LocalDate date);
+}
+```
+
+---
+
+### dto/RegisterUserRequest.java
+
+```java
+package com.example.attendance.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import lombok.*;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class RegisterUserRequest {
+    @NotBlank
+    private String username;
+    @NotBlank
+    private String password;
+    private String fullName;
+    private String email;
+    @NotBlank
+    private String role; // ADMIN|STUDENT|FACULTY
+}
+```
+
+---
+
+### dto/LoginRequest.java
+
+```java
+package com.example.attendance.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import lombok.*;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class LoginRequest {
+    @NotBlank
+    private String username;
+    @NotBlank
+    private String password;
+}
+```
+
+---
+
+### dto/AttendanceRequest.java
+
+```java
+package com.example.attendance.dto;
+
+import com.example.attendance.entity.Status;
+import jakarta.validation.constraints.NotNull;
+import lombok.*;
+
+import java.time.LocalDate;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class AttendanceRequest {
+    @NotNull
+    private Long userId;
+    @NotNull
+    private LocalDate date;
+    @NotNull
+    private Status status;
+    private String remarks;
+}
+```
+
+---
+
+### exception/ApiException.java
+
+```java
+package com.example.attendance.exception;
+
+public class ApiException extends RuntimeException {
+    public ApiException(String message) {
+        super(message);
+    }
+}
+```
+
+---
+
+### service/UserService.java
+
+```java
+package com.example.attendance.service;
+
+import com.example.attendance.dto.LoginRequest;
+import com.example.attendance.dto.RegisterUserRequest;
+import com.example.attendance.entity.AppUser;
+import com.example.attendance.entity.Role;
+import com.example.attendance.repository.RoleRepository;
+import com.example.attendance.repository.UserRepository;
+import com.example.attendance.exception.ApiException;
+import com.example.attendance.config.JwtUtil;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.util.Set;
+
+@Service
+@RequiredArgsConstructor
+public class UserService {
+
+    private final UserRepository userRepo;
+    private final RoleRepository roleRepo;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+
+    public void register(RegisterUserRequest req) {
+        if (userRepo.findByUsername(req.getUsername()).isPresent()) {
+            throw new ApiException("Username already exists");
+        }
+
+        Role role = roleRepo.findByName("ROLE_" + req.getRole().toUpperCase())
+                .orElseThrow(() -> new ApiException("Role not found"));
+
+        AppUser user = AppUser.builder()
+                .username(req.getUsername())
+                .password(passwordEncoder.encode(req.getPassword()))
+                .fullName(req.getFullName())
+                .email(req.getEmail())
+                .roles(Set.of(role))
+                .enabled(true)
+                .build();
+
+        userRepo.save(user);
+    }
+
+    public String login(LoginRequest req) {
+        AppUser user = userRepo.findByUsername(req.getUsername())
+                .orElseThrow(() -> new ApiException("Invalid username or password"));
+
+        if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
+            throw new ApiException("Invalid username or password");
+        }
+
+        return jwtUtil.generateToken(user.getUsername());
+    }
+}
+```
+
+---
+
+### service/AttendanceService.java
+
+```java
+package com.example.attendance.service;
+
+import com.example.attendance.dto.AttendanceRequest;
+import com.example.attendance.entity.AppUser;
+import com.example.attendance.entity.Attendance;
+import com.example.attendance.repository.AttendanceRepository;
+import com.example.attendance.repository.UserRepository;
+import com.example.attendance.exception.ApiException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class AttendanceService {
+
+    private final AttendanceRepository attendanceRepo;
+    private final UserRepository userRepo;
+
+    public Attendance markAttendance(AttendanceRequest req) {
+        AppUser user = userRepo.findById(req.getUserId())
+                .orElseThrow(() -> new ApiException("User not found"));
+
+        Attendance attendance = attendanceRepo.findByUserAndDate(user, req.getDate())
+                .orElse(Attendance.builder()
+                        .user(user)
+                        .date(req.getDate())
+                        .build());
+
+        attendance.setStatus(req.getStatus());
+        attendance.setRemarks(req.getRemarks());
+
+        return attendanceRepo.save(attendance);
+    }
+
+    public List<Attendance> getUserAttendance(String username) {
+        AppUser user = userRepo.findByUsername(username)
+                .orElseThrow(() -> new ApiException("User not found"));
+        return attendanceRepo.findByUserOrderByDateDesc(user);
+    }
+
+    public List<Attendance> getUserAttendanceById(Long userId) {
+        AppUser user = userRepo.findById(userId)
+                .orElseThrow(() -> new ApiException("User not found"));
+        return attendanceRepo.findByUserOrderByDateDesc(user);
+    }
+}
+```
+
+---
+
+### config/JwtUtil.java
+
+```java
+package com.example.attendance.config;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import java.util.Date;
+
+@Component
+public class JwtUtil {
+
+    @Value("${app.jwt.secret}")
+    private String secret;
+
+    @Value("${app.jwt.expiration-ms}")
+    private long expirationMs;
+
+    public String generateToken(String username) {
+        return Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
+                .signWith(SignatureAlgorithm.HS256, secret)
+                .compact();
+    }
+
+    public String extractUsername(String token) {
+        Claims claims = Jwts.parser().setSigningKey(secret).parseClaimsJws(token).getBody();
+        return claims.getSubject();
+    }
+
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parser().setSigningKey(secret).parseClaimsJws(token);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+}
+```
+
+---
+
+### config/JwtFilter.java
+
+```java
+package com.example.attendance.config;
+
+import com.example.attendance.repository.UserRepository;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+import java.util.stream.Collectors;
+
+@Component
+@RequiredArgsConstructor
+public class JwtFilter extends OncePerRequestFilter {
+
+    private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws IOException, jakarta.servlet.ServletException {
+        final String authHeader = request.getHeader("Authorization");
+        String token = null;
+        String username = null;
+
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7);
+            try {
+                username = jwtUtil.extractUsername(token);
+            } catch (Exception ignored) {}
+        }
+
+        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            var userOpt = userRepository.findByUsername(username);
+            if (userOpt.isPresent() && jwtUtil.validateToken(token)) {
+                var user = userOpt.get();
+                var authorities = user.getRoles().stream()
+                        .map(r -> new SimpleGrantedAuthority(r.getName()))
+                        .collect(Collectors.toList());
+
+                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                        username, null, authorities);
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+            }
+        }
+
+        filterChain.doFilter(request, response);
+    }
+}
+```
+
+---
+
+### config/SecurityConfig.java
+
+```java
+package com.example.attendance.config;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+@Configuration
+@RequiredArgsConstructor
+public class SecurityConfig {
+
+    private final JwtFilter jwtFilter;
+    private final UserDetailsService userDetailsService; // we will provide a bean below
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http.csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/user/**").hasAnyAuthority("ROLE_STUDENT", "ROLE_FACULTY", "ROLE_ADMIN")
+                        .anyRequest().authenticated())
+                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
+        http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+        return http.build();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+}
+```
+
+---
+
+### controller/AuthController.java
+
+```java
+package com.example.attendance.controller;
+
+import com.example.attendance.dto.LoginRequest;
+import com.example.attendance.dto.RegisterUserRequest;
+import com.example.attendance.service.UserService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/auth")
+@RequiredArgsConstructor
+public class AuthController {
+
+    private final UserService userService;
+
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterUserRequest req) {
+        userService.register(req);
+        return ResponseEntity.ok(Map.of("message", "User registered"));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest req) {
+        String token = userService.login(req);
+        return ResponseEntity.ok(Map.of("token", token));
+    }
+}
+```
+
+---
+
+### controller/AdminController.java
+
+```java
+package com.example.attendance.controller;
+
+import com.example.attendance.dto.AttendanceRequest;
+import com.example.attendance.entity.Attendance;
+import com.example.attendance.service.AttendanceService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/admin")
+@RequiredArgsConstructor
+public class AdminController {
+
+    private final AttendanceService attendanceService;
+
+    @PostMapping("/attendance/mark")
+    public ResponseEntity<Attendance> mark(@Valid @RequestBody AttendanceRequest req) {
+        return ResponseEntity.ok(attendanceService.markAttendance(req));
+    }
+
+    @GetMapping("/attendance/user/{userId}")
+    public ResponseEntity<?> getByUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(attendanceService.getUserAttendanceById(userId));
+    }
+}
+```
+
+---
+
+### controller/UserController.java
+
+```java
+package com.example.attendance.controller;
+
+import com.example.attendance.service.AttendanceService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/user")
+@RequiredArgsConstructor
+public class UserController {
+
+    private final AttendanceService attendanceService;
+
+    @GetMapping("/attendance")
+    public ResponseEntity<?> myAttendance(Authentication auth) {
+        return ResponseEntity.ok(attendanceService.getUserAttendance(auth.getName()));
+    }
+}
+```
+
+---
+
+## How to run
+
+1. Create Oracle user and grant privileges:
+```sql
+CREATE USER attendance_user IDENTIFIED BY attendance_pass;
+GRANT CONNECT, RESOURCE TO attendance_user;
+ALTER USER attendance_user QUOTA UNLIMITED ON USERS;
+```
+
+2. Update `application.yml` credentials if different.
+
+3. Build and run:
+```bash
+mvn clean package
+mvn spring-boot:run
+```
+
+4. API flow (Postman):
+- POST `/auth/register` -> register (role must exist in roles table)
+- POST `/auth/login` -> receive token
+- Add header `Authorization: Bearer <token>` to protected endpoints
+- POST `/admin/attendance/mark` -> mark attendance
+- GET `/user/attendance` -> user's attendance
+
+---
+
+## Notes & next steps
+- No seed data included intentionally. Create roles manually via DB or implement an admin endpoint to create roles.
+- Replace `app.jwt.secret` in `application.yml` with a strong secret and store in environment variables for production.
+- Consider adding DTOs for responses and global exception handling.
+
+---
+
+If you want, I can now:
+
+- generate a ZIP with these files, or
+- add a small SQL file to create roles table and default roles, or
+- add Postman collection for the above APIs.
+
+Tell me which one you want next.

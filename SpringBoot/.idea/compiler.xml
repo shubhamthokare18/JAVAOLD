@@ -12,7 +12,7 @@
         <module name="mail" />
         <module name="SpringSecurityEx" />
       </profile>
-      <profile name="Annotation profile for Sept9_SpringSecurity" enabled="true">
+      <profile name="Annotation profile for Aug12_springPractice" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
@@ -21,15 +21,16 @@
         </processorPath>
         <module name="Sept9_SpringSecurity" />
         <module name="student" />
+        <module name="student (2)" />
         <module name="queston-service" />
         <module name="Person_8_7_2025" />
         <module name="JavaCode" />
         <module name="securityapplication" />
         <module name="learning" />
-        <module name="Aug6_SpringBoot" />
         <module name="mailtask" />
-        <module name="springboot" />
+        <module name="Aug6_SpringBoot" />
         <module name="Aug12_springPractice" />
+        <module name="springboot" />
         <module name="pdfwriter" />
         <module name="security" />
         <module name="jackson" />
@@ -65,6 +66,7 @@
       <module name="spring_security_blog_app" options="-parameters" />
       <module name="springboot" options="-parameters" />
       <module name="student" options="-parameters" />
+      <module name="student (2)" options="-parameters" />
       <module name="studentapp" options="-parameters" />
       <module name="task" options="-parameters" />
     </option>

@@ -1,0 +1,24 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: currency-converter
+
+  datasource:
+    username: eidiko
+    password: sarasu10
+    url: jdbc:oracle:thin:@localhost:1521:xe
+    driver-class-name: oracle.jdbc.OracleDriver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+app:
+  api:
+    key: test123
+
+  external:
+    base-url: https://api.exchangerate-api.com/v4
