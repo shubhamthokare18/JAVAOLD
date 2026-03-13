@@ -1,0 +1,31 @@
+server:
+  port: 8090
+
+spring:
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: shubhamthokare.eidiko@gmail.com
+    password: bxhgzvlpgjybeaph
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  application:
+    name: hostel-management-system
+
+  datasource:
+    url: jdbc:oracle:thin:@localhost:1521:xe
+    username: eidiko
+    password: sarasu10
+    driver-class-name: oracle.jdbc.OracleDriver
+
+  jpa:
+    database-platform: org.hibernate.dialect.OracleDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true

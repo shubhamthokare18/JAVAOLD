@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: project
+
+server:
+  port: 8090
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/hmsdb?useSSL=false&serverTimezone=UTC
+    username: eidiko
+    password: sarasu10
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    database-platform: org.hibernate.dialect.MySQL8Dialect
